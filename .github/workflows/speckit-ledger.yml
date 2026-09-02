@@ -1,0 +1,39 @@
+name: Spec Kit GitHub Ledger
+
+on:
+  pull_request:
+    paths:
+      - "specs/**/tasks.md"
+      - "specs/**/github-ledger.json"
+      - ".github/workflows/speckit-ledger.yml"
+  push:
+    paths:
+      - "specs/**/tasks.md"
+      - "specs/**/github-ledger.json"
+      - ".github/workflows/speckit-ledger.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: speckit-ledger-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: read
+    uses: gptcompany/gobabygo/.github/workflows/speckit-ledger-reusable.yml@b09950197283b746496313c45e8fb3b8891b06e5
+    with:
+      mode: plan
+      runtime_ref: b09950197283b746496313c45e8fb3b8891b06e5
+
+  apply:
+    if: (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      issues: write
+    uses: gptcompany/gobabygo/.github/workflows/speckit-ledger-reusable.yml@b09950197283b746496313c45e8fb3b8891b06e5
+    with:
+      mode: apply
+      runtime_ref: b09950197283b746496313c45e8fb3b8891b06e5
