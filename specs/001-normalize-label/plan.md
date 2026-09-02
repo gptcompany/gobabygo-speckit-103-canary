@@ -26,7 +26,8 @@ run interni, quindi un secondo passaggio è l'identità.
 
 **Storage**: N/A — funzione pura, nessuno stato persistente
 
-**Testing**: pytest (unica dipendenza di sviluppo)
+**Testing**: pytest e pytest-cov (uniche dipendenze di sviluppo; presenti sulla workstation:
+pytest 9.0.2, coverage 7.15.4)
 
 **Target Platform**: Linux (workstation di sviluppo e runner GitHub Actions `ubuntu-latest`)
 
@@ -104,14 +105,25 @@ INV-1 + INV-2 + INV-3 implicano l'idempotenza di FR-008.
 
 - **TDD**: obbligatorio per il task che modifica il comportamento (T002). Evidenza RED osservabile
   richiesta prima di qualsiasi edit a `src/labels.py`, poi il cambiamento GREEN minimo.
-- **Comando di test**: `python3 -m pytest tests/unit/test_labels.py -v`
+- **Comando di test (GREEN)**: `python3 -m pytest tests/unit/test_labels.py -v`
+- **Comando di coverage (gate SC-004)**:
+  `python3 -m pytest tests/unit/test_labels.py --cov=labels --cov-report=term-missing --cov-fail-under=100`
+  Fallisce con exit code diverso da 0 se la copertura di `src/labels.py` scende sotto il 100%.
 - **Budget di mutazione**: 1 mutazione rappresentativa per invariante critico → 3 totali, il
   default. Ogni mutazione deve far fallire almeno un test:
   1. INV-1: sostituire `" ".join(text.split())` con `" ".join(text.split(" "))` (non rimuove i
      bordi in presenza di whitespace multiplo, e non tratta tab/newline come separatori).
   2. INV-2: sostituire il separatore `" "` con `"  "` (due spazi).
   3. INV-3: aggiungere un `sorted(...)` sui token (altera l'ordine preservando il multiinsieme).
-- **Coverage attesa**: 100% delle righe di `src/labels.py` (SC-004).
+
+  Per ciascuna delle tre mutazioni va catturato l'output pytest fallito (evidenza di sensibilità
+  richiesta da SC-003) e la mutazione va poi revertita, lasciando l'albero di lavoro identico allo
+  stato GREEN. Le mutazioni sono evidenza di qualità dei test, non un contatore da massimizzare:
+  ogni espansione oltre le tre previste richiede una modalità di fallimento concreta e non coperta.
+- **Coverage attesa**: 100% delle righe di `src/labels.py`, imposta dal gate `--cov-fail-under=100`
+  (SC-004).
+- **Contratto sul messaggio d'errore**: il `TypeError` di FR-007 deve contenere `normalize_label` e
+  il nome del tipo ricevuto, asserito con `pytest.raises(TypeError, match=...)`.
 
 ## Milestone e ordinamento delle dipendenze
 
@@ -131,7 +143,8 @@ non è eseguibile, quindi non esiste parallelismo sfruttabile.
 | Implementazione via regex `\s+` divergente da `str.split()` | Comportamento diverso su whitespace Unicode | Il piano impone `str.split()`; la review verifica l'aderenza |
 | Coercizione implicita di input non-`str` | Errori del chiamante mascherati | FR-007 impone `TypeError`; test dedicato su `None`, `int`, `list` |
 | Test scritti dopo l'implementazione (TDD apparente) | Test che non possono fallire | Evidenza RED osservabile richiesta e verificata dal reviewer nello scope immutabile |
-| `pythonpath` non configurato | Test non eseguibili in CI | T001 è prerequisito bloccante di T002 |
+| `pythonpath` non configurato | Test non eseguibili in CI | T001 è prerequisito bloccante di T002; `pythonpath` è dimostrabile solo quando esiste un modulo da importare, quindi la sua verifica è esplicitamente assegnata a T002 (import di `labels`) |
+| Copertura dichiarata ma non misurata | SC-004 chiuso senza evidenza | Gate `--cov-fail-under=100` nel comando di done criteria di T002 |
 
 ## Rollback
 

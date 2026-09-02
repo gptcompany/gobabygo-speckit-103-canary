@@ -51,8 +51,9 @@ richiede altre componenti, servizi o stato persistente.
   di riferimento (vedi FR-002), incluso `U+00A0` NO-BREAK SPACE, sono trattati come separatori e
   quindi compressi in un singolo `U+0020`; non vengono preservati letteralmente.
 - **Whitespace interno già singolo**: la funzione non altera separatori già canonici.
-- **Input non stringa**: `TypeError` con messaggio esplicito; nessuna coercizione implicita
-  (nessun `str()` automatico), perché coercire nasconderebbe errori del chiamante.
+- **Input non stringa**: `TypeError` il cui messaggio contiene la sottostringa `normalize_label` e
+  il nome del tipo ricevuto (vedi FR-007); nessuna coercizione implicita (nessun `str()`
+  automatico), perché coercire nasconderebbe errori del chiamante.
 - **Sottoclassi di `str`**: accettate; il valore restituito è un `str` normale.
 
 ## Requirements *(mandatory)*
@@ -71,7 +72,9 @@ richiede altre componenti, servizi o stato persistente.
   originale.
 - **FR-006**: Il sistema MUST restituire `""` quando l'input è vuoto o composto solo da whitespace.
 - **FR-007**: Il sistema MUST sollevare `TypeError` quando l'argomento non è un'istanza di `str`,
-  senza tentare alcuna conversione.
+  senza tentare alcuna conversione. Il messaggio dell'eccezione MUST contenere la sottostringa
+  `normalize_label` e il nome del tipo ricevuto (es. `NoneType`, `int`), così che il contratto sia
+  asseribile con `pytest.raises(TypeError, match=...)`; il resto del testo non è contrattuale.
 - **FR-008**: Il sistema MUST essere idempotente: `normalize_label(normalize_label(x)) ==
   normalize_label(x)` per ogni `x` valido.
 - **FR-009**: La funzione MUST essere pura: nessuno stato globale, nessun I/O, nessuna mutazione
@@ -89,12 +92,18 @@ Nessuna entità dati persistente. La feature espone una singola funzione pura su
   suite passa con 0 fallimenti.
 - **SC-002**: La proprietà di idempotenza (FR-008) è verificata su un insieme di almeno 8 input
   eterogenei che includono whitespace agli estremi, whitespace interno multiplo, whitespace misto
-  tab/newline, `U+00A0`, stringa vuota e stringa di soli whitespace.
+  tab/newline, `U+00A0`, stringa vuota e stringa di soli whitespace. I casi MUST essere
+  parametrizzati in modo che l'output di `pytest -v` elenchi almeno 8 test id distinti per
+  l'idempotenza, rendendo il conteggio verificabile dall'output invece che per ispezione del
+  sorgente.
 - **SC-003**: Ognuno dei tre invarianti critici (nessun whitespace agli estremi; nessuna coppia di
   spazi consecutivi e separatori esclusivamente `U+0020`; sequenza di token preservata) è coperto da
-  almeno un test che fallisce se l'invariante viene violato.
+  almeno un test che fallisce se l'invariante viene violato. La sensibilità MUST essere dimostrata
+  eseguendo le tre mutazioni elencate in plan.md e catturando, per ciascuna, l'output pytest
+  fallito; la mutazione va poi revertita.
 - **SC-004**: La copertura delle righe del modulo che implementa `normalize_label` è del 100%,
-  misurabile perché il modulo contiene solo la funzione e la sua validazione di tipo.
+  misurata da un comando che fallisce sotto soglia:
+  `python3 -m pytest tests/unit/test_labels.py --cov=labels --cov-report=term-missing --cov-fail-under=100`.
 
 ## Assumptions
 
