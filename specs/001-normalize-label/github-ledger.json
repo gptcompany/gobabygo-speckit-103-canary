@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "feature_id": "normalize-label-d25338638c86",
+  "repository": "gptcompany/gobabygo-speckit-103-canary",
+  "schema": "mesh.speckit.github-ledger.v1"
+}
